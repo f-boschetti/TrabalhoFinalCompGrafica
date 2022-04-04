@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>Jogo pra n estragar canetão</title>
+	</head>
+	<body>
+		<!-- three js é carregada aqui -->
+		<script src="three.min.js"></script>
+
+		<!-- ali tem a three toda mas eu só to importado isso -->
+		<script src="js/examples/js/controls/FlyControls.js"></script>
+
+		<script>
+
+			//teria que adicionar algo pra detectar colizão e marcar os pontos mas n faço ideia de como fazer
+
+			//disseram q é assim q coloca um delta, mas n entendi direito
+			var clock;
+			function initClock(){
+				clock = new THREE.Clock();
+			}
+
+			var scene;
+			function iniciaCena(){
+				scene = new THREE.Scene();
+			}
+
+			function iniciaCameraDardo(){
+				camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+				camera.position.x = 0;
+				camera.position.y = 0;
+				camera.position.z = 100;
+				camera.lookAt(new THREE.Vector3(0, 0, 0));
+			}
+
+			var renderer;
+			function renderiza(){
+				renderer = new THREE.WebGLRenderer();
+ 				renderer.setSize(window.innerWidth, window.innerHeight);
+ 				document.body.appendChild(renderer.domElement);
+			}
+
+			var circuloCentro, circuloMeio, circuloFora;
+			var circulos = [];
+			//aqui depois se quiser da pra fazer receber algo e adicionar circulos com um for ou sla
+			function addAlvo(){
+				var geometry = new THREE.CircleGeometry(1, 50);
+				var material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+				circuloCentro = new THREE.Mesh(geometry, material);
+				circuloCentro.position.z += 0.3;
+				scene.add(circuloCentro);
+				circulos.push(circuloCentro);
+				
+				var geometryMeio = new THREE.CircleGeometry(2.5, 50);
+				var materialMeio = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+				circuloMeio = new THREE.Mesh(geometryMeio, materialMeio);
+				circuloMeio.position.z += 0.2;
+				scene.add(circuloMeio);
+				circulos.push(circuloMeio);
+				
+				var geometryFora = new THREE.CircleGeometry(4, 50);
+				var materialFora = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+				circuloFora = new THREE.Mesh(geometryFora, materialFora);
+				scene.add(circuloFora);
+				circulos.push(circuloFora);
+			}
+
+			var flyControls;
+			function criaDardo(){
+				//criando uma região que vai conter a câmera
+				var container = document.createElement('div');
+				document.body.appendChild(container);
+
+				//tem q passar o domElement aqui dai por isso que tem q colocar o bagulho dentro da div
+				//pelo menos foi isso q eu entendi
+				flyControls = new THREE.FlyControls(camera, renderer.domElement);
+				flyControls.movementSpeed = 25;
+				flyControls.domElement = container;
+				//o quão rapido ela olha pro lado
+				flyControls.rollSpeed = 0.5;
+				//anda sozinho
+				flyControls.autoForward = false;
+				//clica pra girar a camera
+				flyControls.dragToLook = false;
+
+				container.appendChild(renderer.domElement);
+			}
+
+			function startGUIOfFlyCamera(){
+				controls = new function(){
+					this.movementSpeed	= 25.0;
+					this.rollSpeed 			= 0.15;
+					this.autoForward		= false;
+					this.dragToLook 		= false;
+				};
+			}
+
+			function startDardo(mostrarAlert){
+				var confirmacao = false;
+				if(mostrarAlert){
+					confirmacao = confirm("Por padrão o FlyCamera seta para se mover com as teclas 'W, A, S, D, Q, E, R e F'.\n PORÉM, você deve se mover posicionando o mouse nos cantos da tela você vira\nClick esquerdo anda para frente\n Click direito anda para trás\nO ALVO SE MOVE HORIZONTALMENTE");
+				}else {
+					confirmacao = confirm("Concorda em se mover somente usando o mouse?");
+				}
+				if(confirmacao){
+					initClock();
+					iniciaCena();
+					iniciaCameraDardo();
+					renderiza();
+					addAlvo();
+					criaDardo();
+					startGUIOfFlyCamera();
+				}
+			}
+
+			function updateDardo(delta){
+				if(flyControls == null){
+					return;
+				}
+				// atualiza a posição da câmera 
+				flyControls.update(delta);
+				// atualiza valores da câmera 
+				flyControls.movementSpeed 		= controls.movementSpeed;
+				flyControls.rollSpeed 				= controls.rollSpeed;
+				flyControls.autoForward 	 		= controls.autoForward;
+				flyControls.dragToLook 				= controls.dragToLook;
+			}
+
+			function resetaCamera(){
+				camera.position.x = 0;
+				camera.position.y = 0;
+				camera.position.z = 100;
+				camera.lookAt(new THREE.Vector3(0, 0, 0));
+			}
+			
+			function onKeyDown(event) {
+				var keyCode = event.which;
+
+				if(keyCode == 82){
+					resetaCamera();
+				}
+				console.log('keyCode', keyCode);
+			};
+
+			var paraDireita = true;
+			var velocidadeMovimentacao = 0.1;
+
+			// renderiza na tela
+			function render() {
+				//tempo passado entre última chamada dessa mesma linha e a de agora
+				var delta = clock.getDelta();
+				if (paraDireita) {
+					for (let i = 0; i < circulos.length; i++) {
+						circulos[i].position.x += velocidadeMovimentacao;
+					}
+				}else{
+					for (let i = 0; i < circulos.length; i++) {
+						circulos[i].position.x -= velocidadeMovimentacao;
+					}
+				}
+				if(circulos[0].position.x >= 10){
+					paraDireita = false;
+				}else if (circulos[0].position.x <= -10) {
+					paraDireita = true;
+				}
+				if(camera.position.z <= 0 ){
+					resetaCamera();
+					//acho que aqui daria pra fazer calcular a pontuação levando em consideração a posição dos circulos e tals, mas n sei
+				}
+				//pesquisei aquele role pra não ficar bugado de acordo com os frames
+				updateDardo(delta);
+				requestAnimationFrame(render);
+				renderer.render(scene, camera);
+			};
+
+			document.addEventListener("keydown", onKeyDown, false);
+
+			startDardo(true);
+			render();
+
+		</script>
+	</body>
+</html>
